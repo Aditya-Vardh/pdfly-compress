@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PDF Compressor</title>
+<style>
+:root{--bg:#f3f3f0;--sf:#fff;--ink:#1d1d1b;--mute:#6c6c66;--line:#dcdcd6;--acc:#2f5bea;--ai:#fff;--ok:#16794a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151514;--sf:#222220;--ink:#ececea;--mute:#9b9b94;--line:#37372f;--acc:#7b9bff;--ai:#0b1020;--ok:#5fd39a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#151514;--sf:#222220;--ink:#ececea;--mute:#9b9b94;--line:#37372f;--acc:#7b9bff;--ai:#0b1020;--ok:#5fd39a;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+[hidden]{display:none!important}
+main{max-width:660px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:24px;margin:0 0 4px}.sub,.mute{color:var(--mute)}.sub{margin:0 0 22px}
+.card{background:var(--sf);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.drop{text-align:center;border:2px dashed var(--line);padding:44px 18px}.drop.over{border-color:var(--acc)}.drop p{margin:0 0 14px;color:var(--mute)}
+button,select,input[type=number]{font:inherit;color:var(--ink);background:var(--sf);border:1px solid var(--line);padding:8px 14px;border-radius:9px;cursor:pointer}
+input[type=number]{width:100%;box-sizing:border-box;cursor:text}
+button:disabled,select:disabled,input:disabled{opacity:.45;cursor:default}
+.pri{background:var(--acc);color:var(--ai);border-color:var(--acc);font-weight:600}
+.wide{width:100%;padding:11px;margin-top:6px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:12px}.im{min-width:0}.im b{word-break:break-all}
+.acts{display:flex;gap:6px;flex:none}.acts button{padding:6px 11px}
+.ok{color:var(--ok)}
+.seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:6px}.seg button{padding:8px 4px}.seg .on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#desc{margin:12px 0}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--mute)}
+label.chk{flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--ink)}
+input[type=range]{width:100%}progress{width:100%;height:6px;display:block;margin-top:6px}
+.bar{display:flex;gap:8px;margin-bottom:12px}.bar button{flex:1}
+#pv{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:12px;z-index:10}
+.mod{background:var(--sf);border-radius:14px;max-width:940px;width:100%;max-height:92vh;display:flex;flex-direction:column;padding:12px;gap:10px;box-sizing:border-box}
+.mh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.mh button{padding:5px 10px}
+.cmp{overflow:auto;border:1px solid var(--line);border-radius:8px;flex:1;background:#8a8a85}
+#inn{position:relative;width:100%}#inn canvas{display:block;width:100%;height:auto;background:#fff}
+#cb{position:absolute;top:0;left:0;clip-path:inset(0 0 0 50%)}#dv{position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--acc);pointer-events:none}
+.lab{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--mute)}.lab input{flex:1}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none;max-width:90vw;z-index:20}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media(max-width:480px){.row{grid-template-columns:1fr}.item{flex-direction:column;align-items:stretch}}
+</style></head>
+<body><main>
+<h1>PDF Compressor</h1>
+<p class="sub">Shrink PDFs right in your browser. Your files never leave your device.</p>
+<div id="drop" class="card drop"><p>Drop one or more PDFs here</p><button class="pri" id="pick">Choose PDFs</button></div>
+<div id="work" hidden>
+  <div id="list"></div>
+  <div class="bar"><button id="add">+ Add more</button><button id="zip" hidden>Download all (ZIP)</button></div>
+  <div class="card">
+    <div class="seg" id="seg"><button data-m="lossless">Lossless</button><button data-m="bal">Balanced</button><button data-m="strong">Strong</button><button data-m="target">Target size</button><button data-m="custom">Custom</button></div>
+    <p id="desc" class="mute"></p>
+    <div class="row" id="qrow">
+      <label>Image quality: <b id="qv"></b><input type="range" id="q" min="30" max="95" value="75"></label>
+      <label>Max image size<select id="px"><option value="0">Original</option><option value="3000">3000 px</option><option value="2000">2000 px</option><option value="1500">1500 px</option><option value="1000">1000 px</option></select></label>
+    </div>
+    <div class="row" id="trow" hidden><label>Make each file smaller than (MB)<input type="number" id="tg" value="1" min="0.1" step="0.1"></label></div>
+    <label class="chk"><input type="checkbox" id="gray"> Convert images to grayscale</label>
+    <label class="chk" style="margin-top:8px"><input type="checkbox" id="meta"> Remove metadata (author, dates, software)</label>
+    <button class="pri wide" id="go">Compress</button>
+  </div>
+</div>
+<div id="pv" hidden><div class="mod">
+  <div class="mh"><b id="pt"></b><span><button id="pp">‹</button> <span id="pn"></span> <button id="pnx">›</button> <button id="pz">Zoom 2×</button> <button id="pc">Close</button></span></div>
+  <div class="cmp"><div id="inn"><canvas id="ca"></canvas><canvas id="cb"></canvas><div id="dv"></div></div></div>
+  <div class="lab"><span>Original</span><input type="range" id="wp" min="0" max="100" value="50"><span>Compressed</span></div>
+</div></div>
+<div id="toast"></div>
+<input type="file" id="fi" accept=".pdf,application/pdf" multiple hidden>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script>
+const $=s=>$d.querySelector(s),$d=document,{PDFDocument,PDFName,PDFRawStream:PRS,PDFArray}=PDFLib,N=s=>PDFName.of(s);
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let files=[],mode='bal',uid=0,busy=false;
+const PR={bal:[75,2000],strong:[55,1500]},STEPS=[[85,2500],[75,2000],[65,1600],[55,1300],[45,1000],[35,800],[30,600]],
+D={lossless:'Keeps every image and page exactly as it is. It only repacks the file, so savings are usually small.',
+bal:'Recompresses images at good quality and caps their size. Usually the best trade for scans and photos.',
+strong:'Smallest file. Photos may look slightly softer when zoomed in.',
+target:'Finds the best image quality that still fits under your size limit.',custom:'Choose your own image quality and maximum image size.'};
+const fmt=b=>b>=1e6?(b/1e6).toFixed(2)+' MB':Math.max(1,Math.round(b/1e3))+' KB',tick=()=>new Promise(r=>setTimeout(r)),
+esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),4000)}
+function setMode(m){
+  mode=m;if(PR[m]){$('#q').value=PR[m][0];$('#px').value=PR[m][1]}
+  const L=m=='lossless';$('#qv').textContent=$('#q').value;$('#q').disabled=$('#px').disabled=L||m=='target';
+  $('#gray').disabled=L;if(L)$('#gray').checked=false;
+  $('#qrow').hidden=m=='target';$('#trow').hidden=m!='target';
+  $d.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.m==m));$('#desc').textContent=D[m];
+}
+$('#seg').onclick=e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m)};
+$('#q').oninput=$('#px').onchange=()=>setMode('custom');
+
+/* ---- files ---- */
+async function load(list){
+  for(const f of list){
+    if(!(f.type=='application/pdf'||/\.pdf$/i.test(f.name))){toast(f.name+' isn’t a PDF.');continue}
+    try{
+      const b=new Uint8Array(await f.arrayBuffer()),doc=await PDFDocument.load(b,{ignoreEncryption:true,updateMetadata:false});
+      if(doc.isEncrypted){toast(f.name+' is password-protected.');continue}
+      const n=[...doc.context.enumerateIndirectObjects()].filter(([,o])=>o instanceof PRS&&o.dict.get(N('Subtype'))===N('Image')).length;
+      files.push({id:++uid,name:f.name.replace(/\.pdf$/i,''),bytes:b,pages:doc.getPageCount(),nimg:n,st:'wait',out:null});
+    }catch{toast('Couldn’t read '+f.name)}
+  }
+  if(files.length){$('#drop').hidden=true;$('#work').hidden=false;if(!$('#seg .on'))setMode('bal')}
+  draw();
+}
+function draw(){
+  $('#list').innerHTML=files.map(f=>{
+    let s;
+    if(f.st=='run')s=`Compressing…<progress max="1" value="${f.pr||0}"></progress>`;
+    else if(f.st=='err')s='Couldn’t compress this file';
+    else if(f.st=='done')s=f.out?`<b class="ok">−${Math.round((1-f.out.length/f.bytes.length)*100)}%</b> · ${fmt(f.bytes.length)} → ${fmt(f.out.length)}${f.miss?' · target not reached':''}${f.info?` · ${f.info.done}/${f.info.total} images`:''}`:'Already optimized. No smaller version possible.';
+    else s=`${fmt(f.bytes.length)} · ${f.pages} pages · ${f.nimg} images`;
+    return `<div class="card item" data-id="${f.id}"><div class="im"><b>${esc(f.name)}.pdf</b><div class="mute">${s}</div></div><div class="acts">${f.out?'<button data-a="pv">Preview</button><button data-a="dl" class="pri">Download</button>':''}<button data-a="rm" aria-label="Remove">✕</button></div></div>`}).join('');
+  $('#zip').hidden=files.filter(f=>f.out).length<2;
+  $('#go').textContent=busy?'Compressing…':files.length>1?'Compress all':'Compress';$('#go').disabled=busy||!files.length;
+  if(!files.length){$('#work').hidden=true;$('#drop').hidden=false}
+}
+$('#list').onclick=e=>{
+  const b=e.target.closest('button[data-a]');if(!b)return;
+  const f=files.find(x=>x.id==b.closest('.item').dataset.id);if(!f)return;
+  if(b.dataset.a=='rm'){if(!busy){files=files.filter(x=>x!==f);draw()}}
+  else if(b.dataset.a=='dl')save(f.name+'-compressed.pdf',new Blob([f.out],{type:'application/pdf'}));
+  else openPv(f);
+};
+$('#pick').onclick=$('#add').onclick=()=>$('#fi').click();
+$('#fi').onchange=e=>{load([...e.target.files]);e.target.value=''};
+addEventListener('dragover',e=>{e.preventDefault();$('#drop').classList.add('over')});
+addEventListener('dragleave',()=>$('#drop').classList.remove('over'));
+addEventListener('drop',e=>{e.preventDefault();$('#drop').classList.remove('over');load([...e.dataTransfer.files])});
+
+/* ---- compression ---- */
+async function inflate(u8,dir){return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(dir=='z'?new CompressionStream('deflate'):new DecompressionStream('deflate'))).arrayBuffer())}
+async function recompress(doc,o,opt){
+  const d=o.dict,num=k=>{const v=d.lookup(N(k));return v&&v.asNumber?v.asNumber():0},w=num('Width'),h=num('Height');
+  if(num('BitsPerComponent')!=8||w*h<40000||o.contents.length<30000||d.has(N('Mask'))||d.has(N('Decode')))return null;
+  const im=d.lookup(N('ImageMask'));if(im&&String(im)=='true')return null;
+  let f=d.lookup(N('Filter'));if(f instanceof PDFArray){if(f.size()!=1)return null;f=f.lookup(0)}f=f&&String(f);
+  const cs=d.lookup(N('ColorSpace'));let ch=0;
+  if(cs instanceof PDFArray){if(String(cs.lookup(0))=='/ICCBased'){const s=cs.lookup(1);ch=s&&s.dict?s.dict.lookup(N('N')).asNumber():0}}
+  else ch=String(cs)=='/DeviceRGB'?3:String(cs)=='/DeviceGray'?1:0;
+  if(ch!=1&&ch!=3)return null;
+  let src;
+  if(f=='/DCTDecode')src=await createImageBitmap(new Blob([o.contents],{type:'image/jpeg'}),{imageOrientation:'none'});
+  else if(f=='/FlateDecode'&&!d.has(N('DecodeParms'))){
+    const raw=await inflate(o.contents,'u');if(raw.length<w*h*ch)return null;
+    const id=new ImageData(w,h),p=id.data;
+    for(let i=0,j=0;i<w*h;i++){if(ch==3){p[4*i]=raw[j++];p[4*i+1]=raw[j++];p[4*i+2]=raw[j++]}else p[4*i]=p[4*i+1]=p[4*i+2]=raw[j++];p[4*i+3]=255}
+    src=await createImageBitmap(id);
+  }else return null;
+  const s=Math.min(1,(opt.px||1e9)/Math.max(w,h)),nw=Math.max(1,Math.round(w*s)),nh=Math.max(1,Math.round(h*s)),c=$d.createElement('canvas');
+  c.width=nw;c.height=nh;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,nw,nh);g.imageSmoothingQuality='high';g.drawImage(src,0,0,nw,nh);
+  if(opt.gray){const id=g.getImageData(0,0,nw,nh),p=id.data;for(let i=0;i<p.length;i+=4)p[i]=p[i+1]=p[i+2]=.299*p[i]+.587*p[i+1]+.114*p[i+2];g.putImageData(id,0,0)}
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',opt.q/100));if(!blob)return null;
+  const nb=new Uint8Array(await blob.arrayBuffer());if(nb.length>=o.contents.length*.92)return null;
+  const sm=d.get(N('SMask'));
+  return doc.context.stream(nb,{Type:'XObject',Subtype:'Image',Width:nw,Height:nh,ColorSpace:'DeviceRGB',BitsPerComponent:8,Filter:'DCTDecode',...(sm?{SMask:sm}:{})});
+}
+async function squeeze(bytes,opt,onp){
+  const doc=await PDFDocument.load(bytes,{ignoreEncryption:true,updateMetadata:false});
+  const list=[...doc.context.enumerateIndirectObjects()].filter(([,x])=>x instanceof PRS);let k=0,done=0,total=0;
+  for(const [ref,o] of list){
+    onp(++k/list.length);if(k%4==0)await tick();
+    try{
+      const img=o.dict.get(N('Subtype'))===N('Image');if(img)total++;
+      let ns=null;if(!opt.lossless&&img)ns=await recompress(doc,o,opt);
+      if(ns){doc.context.assign(ref,ns);done++}
+      else if(!o.dict.has(N('Filter'))&&o.contents.length>=1024&&!/XRef|ObjStm|Metadata/.test(String(o.dict.get(N('Type'))))){
+        const z=await inflate(o.contents,'z');
+        if(z.length<o.contents.length*.95){const nd=o.dict.clone(doc.context);nd.set(N('Filter'),N('FlateDecode'));doc.context.assign(ref,PRS.of(nd,z))}
+      }
+    }catch{}
+  }
+  if(opt.meta){delete doc.context.trailerInfo.Info;doc.catalog.delete(N('Metadata'))}
+  return{bytes:await doc.save({useObjectStreams:true}),done,total};
+}
+async function compressFile(f){
+  f.st='run';f.pr=0;draw();
+  const base={lossless:mode=='lossless',q:+$('#q').value,px:+$('#px').value,gray:$('#gray').checked&&mode!='lossless',meta:$('#meta').checked},T=(+$('#tg').value||1)*1e6,onp=p=>{f.pr=p};
+  let r;
+  try{
+    if(mode=='target'){
+      const run=i=>squeeze(f.bytes,{...base,q:STEPS[i][0],px:STEPS[i][1]},onp);
+      let lo=0,hi=STEPS.length-1;r=await run(hi);
+      if(r.bytes.length<=T)while(lo<hi){const mid=(lo+hi)>>1,t=await run(mid);if(t.bytes.length<=T){hi=mid;r=t}else lo=mid+1}
+      f.miss=r.bytes.length>T;
+    }else r=await squeeze(f.bytes,base,onp);
+    f.out=r.bytes.length<f.bytes.length*.995?r.bytes:null;f.info=base.lossless?null:{done:r.done,total:r.total};f.st='done';
+  }catch{f.st='err';f.out=null}
+  draw();
+}
+$('#go').onclick=async()=>{busy=true;draw();for(const f of files)await compressFile(f);busy=false;draw()};
+
+/* ---- saving ---- */
+async function save(fn,blob){
+  try{const dl=window.claude&&await claude.use('downloads');
+    if(dl)await dl.save({filename:fn,data:blob});
+    else{const a=$d.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;$d.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
+  }catch(e){if(!(e&&e.code=='declined'))toast('Couldn’t save the file.')}
+}
+$('#zip').onclick=async()=>{
+  const z=new JSZip(),used={};
+  for(const f of files.filter(x=>x.out)){let n=f.name,c=used[n]=(used[n]||0)+1;z.file((c>1?`${n} (${c})`:n)+'-compressed.pdf',f.out)}
+  save('compressed-pdfs.zip',await z.generateAsync({type:'blob'}));
+};
+
+/* ---- before / after preview ---- */
+let pvd=null,pvp=1,zoomed=false;
+async function showPv(){
+  $('#pn').textContent=`Page ${pvp} / ${pvd[0].numPages}`;
+  for(const [i,id] of [[0,'#ca'],[1,'#cb']]){
+    const pg=await pvd[i].getPage(pvp),v=pg.getViewport({scale:2}),c=$(id);c.width=v.width;c.height=v.height;
+    await pg.render({canvasContext:c.getContext('2d'),viewport:v}).promise;
+  }
+}
+async function openPv(f){
+  try{
+    $('#pv').hidden=false;$('#pt').textContent=f.name+'.pdf';pvp=1;
+    pvd=[await pdfjsLib.getDocument({data:f.bytes.slice()}).promise,await pdfjsLib.getDocument({data:f.out.slice()}).promise];await showPv();
+  }catch{$('#pv').hidden=true;toast('Couldn’t render the preview.')}
+}
+$('#pp').onclick=()=>{if(pvd&&pvp>1){pvp--;showPv()}};
+$('#pnx').onclick=()=>{if(pvd&&pvp<pvd[0].numPages){pvp++;showPv()}};
+$('#pz').onclick=()=>{zoomed=!zoomed;$('#inn').style.width=zoomed?'200%':'100%';$('#pz').textContent=zoomed?'Fit page':'Zoom 2×'};
+$('#wp').oninput=e=>{$('#cb').style.clipPath=`inset(0 0 0 ${e.target.value}%)`;$('#dv').style.left=e.target.value+'%'};
+$('#pc').onclick=()=>{$('#pv').hidden=true;pvd&&pvd.forEach(d=>d.destroy());pvd=null};
+setMode('bal');
+</script></body></html>
